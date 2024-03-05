@@ -1,5 +1,6 @@
 ﻿<?xml version="1.0" encoding="utf-8"?>
 <Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="..\..\Rock\packages\EntityFramework.6.4.4\build\EntityFramework.props" Condition="Exists('..\..\Rock\packages\EntityFramework.6.4.4\build\EntityFramework.props')" />
   <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
   <Import Project="$(MSBuildProjectDirectory)\Build.tasks" />
   <PropertyGroup>
@@ -14,6 +15,8 @@
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
     <TargetFrameworkProfile />
+    <NuGetPackageImportStamp>
+    </NuGetPackageImportStamp>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -33,35 +36,48 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="DotLiquid">
-      <HintPath>$(SolutionDir)RockWeb\Bin\DotLiquid.dll</HintPath>
+    <Reference Include="BitMiracle.LibTiff.NET, Version=2.4.649.0, Culture=neutral, PublicKeyToken=53879b3e20e7a7d6, processorArchitecture=MSIL">
+      <HintPath>..\..\Rock\packages\BitMiracle.LibTiff.NET.2.4.649\lib\net40\BitMiracle.LibTiff.NET.dll</HintPath>
     </Reference>
-    <Reference Include="EntityFramework">
-      <HintPath>$(SolutionDir)packages\EntityFramework.6.1.3\lib\net45\EntityFramework.dll</HintPath>
+    <Reference Include="EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\..\Rock\packages\EntityFramework.6.4.4\lib\net45\EntityFramework.dll</HintPath>
     </Reference>
-    <Reference Include="EntityFramework.SqlServer">
-      <HintPath>$(SolutionDir)packages\EntityFramework.6.1.3\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+    <Reference Include="EntityFramework.SqlServer, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089, processorArchitecture=MSIL">
+      <HintPath>..\..\Rock\packages\EntityFramework.6.4.4\lib\net45\EntityFramework.SqlServer.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Data.Edm, Version=5.6.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\Rock\packages\Microsoft.Data.Edm.5.6.0\lib\net40\Microsoft.Data.Edm.dll</HintPath>
+    </Reference>
+    <Reference Include="Microsoft.Data.OData, Version=5.6.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\Rock\packages\Microsoft.Data.OData.5.6.0\lib\net40\Microsoft.Data.OData.dll</HintPath>
+    </Reference>
+    <Reference Include="Newtonsoft.Json, Version=13.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <HintPath>..\..\Rock\packages\Newtonsoft.Json.13.0.1\lib\net45\Newtonsoft.Json.dll</HintPath>
     </Reference>
     <Reference Include="PresentationCore" />
-    <Reference Include="Rock">
-      <HintPath>$(SolutionDir)RockWeb\Bin\Rock.dll</HintPath>
-    </Reference>
-    <Reference Include="Rock.Common, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(SolutionDir)RockWeb\Bin\Rock.Common.dll</HintPath>
-    </Reference>
-    <Reference Include="Rock.Lava.Shared, Version=1.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>$(SolutionDir)RockWeb\Bin\Rock.Lava.Shared.dll</HintPath>
-    </Reference>
     <Reference Include="System" />
     <Reference Include="System.ComponentModel.Composition" />
     <Reference Include="System.ComponentModel.DataAnnotations" />
     <Reference Include="System.Core" />
     <Reference Include="System.Drawing" />
+    <Reference Include="System.Net.Http.Formatting, Version=5.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\Rock\packages\Microsoft.AspNet.WebApi.Client.5.2.3\lib\net45\System.Net.Http.Formatting.dll</HintPath>
+    </Reference>
     <Reference Include="System.Runtime.Serialization" />
+    <Reference Include="System.Spatial, Version=5.6.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\Rock\packages\System.Spatial.5.6.0\lib\net40\System.Spatial.dll</HintPath>
+    </Reference>
     <Reference Include="System.Web" />
     <Reference Include="System.Web.Extensions" />
+    <Reference Include="System.Web.Http, Version=5.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\Rock\packages\Microsoft.AspNet.WebApi.Core.5.2.3\lib\net45\System.Web.Http.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Http.OData, Version=5.7.0.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\Rock\packages\Microsoft.AspNet.WebApi.OData.5.7.0\lib\net45\System.Web.Http.OData.dll</HintPath>
+    </Reference>
+    <Reference Include="System.Web.Http.WebHost, Version=5.2.3.0, Culture=neutral, PublicKeyToken=31bf3856ad364e35, processorArchitecture=MSIL">
+      <HintPath>..\..\Rock\packages\Microsoft.AspNet.WebApi.WebHost.5.2.3\lib\net45\System.Web.Http.WebHost.dll</HintPath>
+    </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -85,6 +101,7 @@
     <Compile Include="FileFormatTypeContainer.cs" />
     <Compile Include="FileFormatTypes\X937\BankOfAmericaMerrillLynch.cs" />
     <Compile Include="FileFormatTypes\X937\BankOfAmerica_2021.cs" />
+    <Compile Include="FileFormatTypes\X937\BankOfOklahoma.cs" />
     <Compile Include="FileFormatTypes\X937\BMO.cs" />
     <Compile Include="FileFormatTypes\X937\BankOfTheWest.cs" />
     <Compile Include="FileFormatTypes\X937\BBandT.cs" />
@@ -96,10 +113,12 @@
     <Compile Include="FileFormatTypes\X937\FifthThirdBank.cs" />
     <Compile Include="FileFormatTypes\X937\FrostBank.cs" />
     <Compile Include="FileFormatTypes\X937\MandT.cs" />
+    <Compile Include="FileFormatTypes\X937\NationalBankOfArizona.cs" />
     <Compile Include="FileFormatTypes\X937\PNC.cs" />
     <Compile Include="FileFormatTypes\X937\Regions.cs" />
     <Compile Include="FileFormatTypes\X937\SouthernFirstBank.cs" />
     <Compile Include="FileFormatTypes\X937\Synovus.cs" />
+    <Compile Include="FileFormatTypes\X937\WellsFargo.cs" />
     <Compile Include="FileFormatTypes\X937\WheatonBank.cs" />
     <Compile Include="FileFormatTypes\X937\WintrustFinancial.cs" />
     <Compile Include="FileFormatTypes\X9100\X9100DSTU.cs" />
@@ -158,101 +177,42 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="$(SolutionDir)Rock.Enums\Rock.Enums.csproj">
+    <ProjectReference Include="..\..\Rock\DotLiquid\DotLiquid.csproj">
+      <Project>{00edcb8d-ef33-459c-ad62-02876bd24dff}</Project>
+      <Name>DotLiquid</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Rock\Rock.Common\Rock.Common.csproj">
+      <Project>{13568622-324e-4493-b605-c9896e725d30}</Project>
+      <Name>Rock.Common</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Rock\Rock.Enums\Rock.Enums.csproj">
+      <Project>{61dece2b-0434-435e-8d65-49a4fdf98365}</Project>
+      <Name>Rock.Enums</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Rock\Rock.Lava.Shared\Rock.Lava.Shared.csproj">
+      <Project>{8820cd93-70ee-496d-b17b-0c4c68dd4957}</Project>
+      <Name>Rock.Lava.Shared</Name>
+    </ProjectReference>
+    <ProjectReference Include="..\..\Rock\Rock\Rock.csproj">
+      <Project>{185a31d7-3037-4dae-8797-0459849a84bd}</Project>
+      <Name>Rock</Name>
+    </ProjectReference>
+    <ProjectReference Include="C:\Users\DavidTurner\Dropbox\Projects\BEMA\Plugins\Remote Check Deposit\Rock\Rock.Enums\Rock.Enums.csproj">
       <Project>{61dece2b-0434-435e-8d65-49a4fdf98365}</Project>
       <Name>Rock.Enums</Name>
     </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <PropertyGroup>
-    <!-- There may be a better way of building this reference, but I don't see it -->
-    <MSBuildCommunityTasksPath>$(SolutionDir)\packages\MSBuildTasks.1.5.0.235\tools</MSBuildCommunityTasksPath>
-  </PropertyGroup>
-  <Import Project="$(SolutionDir)packages\MSBuildTasks.1.5.0.235\build\MSBuildTasks.targets" Condition="Exists('$(SolutionDir)packages\MSBuildTasks.1.5.0.235\build\MSBuildTasks.targets')" />
-  <PropertyGroup>
-    <BuildDir>builds</BuildDir>
-  </PropertyGroup>
-  <Target Name="BeforeBuild" DependsOnTargets="UpdateAssemblyVersion">
-  </Target>
-  <Target Name="AfterBuild" DependsOnTargets="BuildPackageZip">
-  </Target>
-  <!-- Clean old stuff -->
-  <Target Name="DeleteFiles">
-    <ItemGroup>
-      <OldFiles Include="$(BuildDir)\tmp\**" />
-    </ItemGroup>
-    <Delete Files="@(OldFiles)" />
-  </Target>
-  <!-- Prepare the files to be zipped -->
-  <Target Name="CopyFiles" DependsOnTargets="DeleteFiles">
-    <ItemGroup>
-      <CopyFiles Include="$(OutputPath)com.bemaservices.RemoteCheckDeposit.dll;" />
-      <BlockCode Include="$(ProjectDir)Plugins\com_bemaservices\RemoteCheckDeposit\**\*.*" />
-      <VersionFile Include="builds\.version" />
-    </ItemGroup>
-    <MakeDir Directories="$(BuildDir)\tmp" Condition="!Exists('$(BuildDir)\tmp')" />
-    <MakeDir Directories="$(BuildDir)\tmp\content" Condition="!Exists('$(BuildDir)\tmp\content')" />
-    <MakeDir Directories="$(BuildDir)\tmp\content\bin" Condition="!Exists('$(BuildDir)\tmp\content\bin')" />
-    <MakeDir Directories="$(BuildDir)\tmp\content\Plugins" Condition="!Exists('$(BuildDir)\tmp\content\Plugins')" />
-    <MakeDir Directories="$(BuildDir)\tmp\install" Condition="!Exists('$(BuildDir)\tmp\install')" />
-    <MakeDir Directories="$(BuildDir)\tmp\uninstall" Condition="!Exists('$(BuildDir)\tmp\uninstall')" />
-    <Copy SourceFiles="@(CopyFiles)" DestinationFolder="$(BuildDir)\tmp\content\bin\" />
-    <Copy SourceFiles="@(BlockCode)" DestinationFiles="@(BlockCode->'$(BuildDir)\tmp\content\Plugins\com_bemaservices\RemoteCheckDeposit\%(RecursiveDir)%(Filename)%(Extension)')" />
-    <!-- Just put the .version file into the install and uninstall folder so that those folders are created in the zip -->
-    <Copy SourceFiles="@(VersionFile)" DestinationFolder="$(BuildDir)\tmp\install" />
-    <Copy SourceFiles="@(VersionFile)" DestinationFolder="$(BuildDir)\tmp\uninstall" />
-  </Target>
-  <!-- Create the package zip file -->
-  <Target Name="BuildPackageZip" DependsOnTargets="CopyFiles" Condition="'$(Configuration)' == 'Release'">
-    <ItemGroup>
-      <ZipFiles Include="$(BuildDir)\tmp\**" />
-    </ItemGroup>
-    <Version VersionFile="builds\.version" BuildType="None" RevisionType="None">
-      <Output TaskParameter="Major" PropertyName="Major" />
-      <Output TaskParameter="Minor" PropertyName="Minor" />
-      <Output TaskParameter="Build" PropertyName="Build" />
-      <Output TaskParameter="Revision" PropertyName="Revision" />
-    </Version>
-    <PropertyGroup>
-      <PackageOut>$(BuildDir)\$(Major).$(Minor).$(Build)</PackageOut>
-    </PropertyGroup>
-    <MakeDir Directories="$(PackageOut)" Condition="!Exists('$(PackageOut)')" />
-    <Message Text="Version: $(Major).$(Minor).$(Build).$(Revision)" />
-    <Zip Files="@(ZipFiles)" WorkingDirectory="$(BuildDir)\tmp\" ZipFileName="$(PackageOut)\RemoteCheckDeposit-v$(Major).$(Minor).$(Build).$(Revision).plugin" ZipLevel="9" />
-  </Target>
   <Target Name="EnsureNuGetPackageBuildImports" BeforeTargets="PrepareForBuild">
     <PropertyGroup>
       <ErrorText>This project references NuGet package(s) that are missing on this computer. Use NuGet Package Restore to download them.  For more information, see http://go.microsoft.com/fwlink/?LinkID=322105. The missing file is {0}.</ErrorText>
     </PropertyGroup>
-    <Error Condition="!Exists('$(SolutionDir)packages\MSBuildTasks.1.5.0.235\build\MSBuildTasks.targets')" Text="$([System.String]::Format('$(ErrorText)', '$(SolutionDir)packages\MSBuildTasks.1.5.0.235\build\MSBuildTasks.targets'))" />
+    <Error Condition="!Exists('..\..\Rock\packages\EntityFramework.6.4.4\build\EntityFramework.props')" Text="$([System.String]::Format('$(ErrorText)', '..\..\Rock\packages\EntityFramework.6.4.4\build\EntityFramework.props'))" />
+    <Error Condition="!Exists('..\..\Rock\packages\EntityFramework.6.4.4\build\EntityFramework.targets')" Text="$([System.String]::Format('$(ErrorText)', '..\..\Rock\packages\EntityFramework.6.4.4\build\EntityFramework.targets'))" />
   </Target>
-  <Target Name="UpdateAssemblyVersion" Condition="'$(Configuration)' == 'Release'">
-    <!-- 
-    	When creating a new version of this project, update the Build number 
-    	(and Major and Minor if needed) in the .version file to be the correct version.
-    	The revision number will always be automatic.
-    -->
-    <!-- 
-      We'll increment the version number only during the "BeforeBuild" and then use this
-      new version number during the "AfterBuild" step for the zip and plugin packaging. 
-    -->
-    <Version VersionFile="builds\.version" BuildType="None" RevisionType="Increment">
-      <Output TaskParameter="Major" PropertyName="Major" />
-      <Output TaskParameter="Minor" PropertyName="Minor" />
-      <Output TaskParameter="Build" PropertyName="Build" />
-      <Output TaskParameter="Revision" PropertyName="Revision" />
-    </Version>
-    <ItemGroup>
-      <!--<AssemblyFile Include="Properties\AssemblyInfo.cs" />-->
-      <RegexTransform Include="Properties\AssemblyInfo.cs">
-        <Find>(?&lt;major&gt;\d+)\.(?&lt;minor&gt;\d+)\.\d+\.(?&lt;revision&gt;\d+)</Find>
-        <ReplaceWith>$(Major).$(Minor).$(Build).$(Revision)</ReplaceWith>
-      </RegexTransform>
-    </ItemGroup>
-    <RegexTransform Items="@(RegexTransform)" />
-  </Target>
+  <Import Project="..\..\Rock\packages\EntityFramework.6.4.4\build\EntityFramework.targets" Condition="Exists('..\..\Rock\packages\EntityFramework.6.4.4\build\EntityFramework.targets')" />
   <PropertyGroup>
-    <PostBuildEvent>xcopy /Y /R /E /I "$(ProjectDir)Plugins" "$(SolutionDir)RockWeb\Plugins"
-xcopy /Y /R "$(ProjectDir)bin\Debug\com.bemaservices.RemoteCheckDeposit.dll" "$(SolutionDir)RockWeb\bin"</PostBuildEvent>
+    <PostBuildEvent>
+    </PostBuildEvent>
   </PropertyGroup>
 </Project>
