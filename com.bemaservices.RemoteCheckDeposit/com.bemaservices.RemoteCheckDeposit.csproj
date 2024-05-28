@@ -106,6 +106,7 @@
     <Compile Include="FileFormatTypes\X937\BankOfTheWest.cs" />
     <Compile Include="FileFormatTypes\X937\BBandT.cs" />
     <Compile Include="FileFormatTypes\X937\BBVACompass.cs" />
+    <Compile Include="FileFormatTypes\X937\HuntingtonBank.cs" />
     <Compile Include="FileFormatTypes\X937\Midfirst.cs" />
     <Compile Include="FileFormatTypes\X937\ComericaBank.cs" />
     <Compile Include="FileFormatTypes\X9100\CommerceBank.cs" />
