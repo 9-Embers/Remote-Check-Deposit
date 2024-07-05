@@ -516,7 +516,7 @@ namespace RockWeb.Plugins.com_bemaservices.RemoteCheckDeposit
                 //
                 var mergeFields = new Dictionary<string, object>
                 {
-                    {  "FileFormat", fileFormat },
+                    { "FileFormat", fileFormat },
                     { "Counter", counter }
                 };
                 var filename = fileFormat.FileNameTemplate.ResolveMergeFields( mergeFields );
