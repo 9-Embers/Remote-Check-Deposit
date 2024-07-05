@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.Composition;
+using System.IO;
 using System.Linq;
 using System.Text;
 
@@ -21,6 +22,17 @@ namespace com.bemaservices.RemoteCheckDeposit.FileFormatTypes
     [ExportMetadata( "ComponentName", "Huntington Bank" )]
 
     [EncryptedTextField( "Bank of First Deposit (BOFD) Routing Number", "", true, key: "BOFDRoutingNumber" )]
+
+    [EncryptedTextField( "Deposit Routing Number", "The routing number to be used on Credit Detail record (25)", true, key: "DepositRoutingNumber", order: 28 )]
+    [EncryptedTextField( "Deposit Account Number", "The account number to be used on Credit Detail record (25)", true, key: "DepositAccountNumber", order: 29 )]
+    [CodeEditorField( "Deposit Slip Template", "The template for the deposit slip that will be generated. <span class='tip tip-lava'></span>",
+        Rock.Web.UI.Controls.CodeEditorMode.Lava,
+        defaultValue: @"
+{{ FileFormat | Attribute:'OriginName' }}
+Account Number: {{ FileFormat | Attribute:'AccountNumber' }}
+Created On {{ Date | Date:'MM-dd-yyyy'}} at {{ Date | Date:'HH:mm' }} by Teller
+Deposited {{ Transactions | Format:'N0' }} checks totaling {{ Amount | FormatAsCurrency }}
+", order: 30 )]
 
     public class HuntingtonBank : X937DSTU
     {
@@ -150,8 +162,10 @@ namespace com.bemaservices.RemoteCheckDeposit.FileFormatTypes
         /// <returns>A BundleHeader record.</returns>
         protected override Records.X937.BundleHeader GetBundleHeader( ExportOptions options, int bundleIndex )
         {
+            var institutionRoutingNumber = Rock.Security.Encryption.DecryptString( GetAttributeValue( options.FileFormat, "InstitutionRoutingNumber" ) );
+
             var header = base.GetBundleHeader( options, bundleIndex );
-            header.ReturnLocationRoutingNumber = string.Empty;
+            header.ReturnLocationRoutingNumber = institutionRoutingNumber;
             return header;
         }
 
@@ -166,9 +180,62 @@ namespace com.bemaservices.RemoteCheckDeposit.FileFormatTypes
         /// </returns>
         protected override List<Record> GetCreditDetailRecords( ExportOptions options, int bundleIndex, List<FinancialTransaction> transactions )
         {
-            //No Type 61 Record Needed
+            var routingNumber = Rock.Security.Encryption.DecryptString( GetAttributeValue( options.FileFormat, "RoutingNumber" ) );
+            var depositRoutingNumber = Rock.Security.Encryption.DecryptString( GetAttributeValue( options.FileFormat, "DepositRoutingNumber" ) );
+            var depositAccountNumber = Rock.Security.Encryption.DecryptString( GetAttributeValue( options.FileFormat, "DepositAccountNumber" ) );
+
             var records = new List<Record>();
-            
+
+            var creditDetail = new CheckDetail //Type 25
+            {
+                PayorBankRoutingNumber = depositRoutingNumber.Substring( 0, 8 ),
+                PayorBankRoutingNumberCheckDigit = depositRoutingNumber.Substring( 8, 1 ),
+                OnUs = ( depositAccountNumber + "/" ).PadLeft( 18, '0' ).PadLeft( 20, ' ' ),
+                ItemAmount = transactions.Sum( t => t.TotalAmount ),
+                ClientInstitutionItemSequenceNumber = GetNextItemSequenceNumber().ToString( "000000000000000" ),
+                BankOfFirstDepositIndicator = "U",
+                CheckDetailRecordAddendumCount = 00,
+                DocumentationTypeIndicator = "G"
+            };
+
+            records.Add( creditDetail );
+
+            for ( int i = 0; i < 2; i++ )
+            {
+                using ( var ms = GetDepositSlipImage( options, i == 0, transactions ) )
+                {
+                    //
+                    // Get the Image View Detail record (type 50).
+                    //
+                    var detail = new ImageViewDetail
+                    {
+                        ImageIndicator = 1,
+                        ImageCreatorRoutingNumber = routingNumber,
+                        ImageCreatorDate = options.ExportDateTime,
+                        ImageViewFormatIndicator = 0,
+                        CompressionAlgorithmIdentifier = 0,
+                        SideIndicator = i,
+                        ViewDescriptor = 0,
+                        DigitalSignatureIndicator = 0
+                    };
+
+                    //
+                    // Get the Image View Data record (type 52).
+                    //
+                    var data = new ImageViewData
+                    {
+                        InstitutionRoutingNumber = routingNumber,
+                        BundleBusinessDate = options.BusinessDateTime,
+                        ClientInstitutionItemSequenceNumber = creditDetail.ClientInstitutionItemSequenceNumber,
+                        ClippingOrigin = 0,
+                        ImageData = ms.ReadBytesToEnd()
+                    };
+
+                    records.Add( detail );
+                    records.Add( data );
+                }
+            }
+
             return records;
         }
 
@@ -243,6 +310,57 @@ namespace com.bemaservices.RemoteCheckDeposit.FileFormatTypes
             return records;
         }
 
+        protected virtual Stream GetDepositSlipImage( ExportOptions options, bool isFrontSide, List<FinancialTransaction> transactions )
+        {
+            var bitmap = new System.Drawing.Bitmap( 1200, 550 );
+            var g = System.Drawing.Graphics.FromImage( bitmap );
+
+            var depositSlipTemplate = GetAttributeValue( options.FileFormat, "DepositSlipTemplate" );
+            var mergeFields = new Dictionary<string, object>
+            {
+                { "FileFormat", options.FileFormat },
+                { "Date", options.ExportDateTime.ToISO8601DateString() },
+                { "Transactions", transactions.Count() },
+                { "Amount", transactions.Sum( t => t.TotalAmount ) }
+            };
+            var depositSlipText = depositSlipTemplate.ResolveMergeFields( mergeFields, null );
+
+            //
+            // Ensure we are opague with white.
+            //
+            g.FillRectangle( System.Drawing.Brushes.White, new System.Drawing.Rectangle( 0, 0, 1200, 550 ) );
+
+            if ( isFrontSide )
+            {
+                g.DrawString( depositSlipText,
+                    new System.Drawing.Font( "Tahoma", 30 ),
+                    System.Drawing.Brushes.Black,
+                    new System.Drawing.PointF( 50, 50 ) );
+            }
+
+            g.Flush();
+
+            //
+            // Ensure the DPI is correct.
+            //
+            bitmap.SetResolution( 200, 200 );
+
+            //
+            // Compress using TIFF, CCITT Group 4 format.
+            //
+            var codecInfo = System.Drawing.Imaging.ImageCodecInfo.GetImageEncoders()
+                .Where( c => c.MimeType == "image/tiff" )
+                .First();
+            var parameters = new System.Drawing.Imaging.EncoderParameters( 1 );
+            parameters.Param[0] = new System.Drawing.Imaging.EncoderParameter( System.Drawing.Imaging.Encoder.Compression, ( long ) System.Drawing.Imaging.EncoderValue.CompressionCCITT4 );
+
+            var ms = new MemoryStream();
+            bitmap.Save( ms, codecInfo, parameters );
+            ms.Position = 0;
+
+            return ms;
+
+        }
 
         /// <summary>
         /// Hashes the string with SHA256.
