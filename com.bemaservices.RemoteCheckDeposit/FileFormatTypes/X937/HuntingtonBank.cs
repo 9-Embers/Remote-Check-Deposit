@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.Composition;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -21,10 +22,9 @@ namespace com.bemaservices.RemoteCheckDeposit.FileFormatTypes
     [Export( typeof( FileFormatTypeComponent ) )]
     [ExportMetadata( "ComponentName", "Huntington Bank" )]
 
-    [EncryptedTextField( "Bank of First Deposit (BOFD) Routing Number", "", true, key: "BOFDRoutingNumber" )]
+    [EncryptedTextField( "Bank of First Deposit (BOFD) Routing Number", "", true, key: "BOFDRoutingNumber", order: 11 )]
 
-    [EncryptedTextField( "Deposit Routing Number", "The routing number to be used on Credit Detail record (25)", true, key: "DepositRoutingNumber", order: 28 )]
-    [EncryptedTextField( "Deposit Account Number", "The account number to be used on Credit Detail record (25)", true, key: "DepositAccountNumber", order: 29 )]
+    [EncryptedTextField( "Deposit Routing Number", "The routing number to be used on Credit Detail record (25)", true, key: "DepositRoutingNumber", order: 12 )]
     [CodeEditorField( "Deposit Slip Template", "The template for the deposit slip that will be generated. <span class='tip tip-lava'></span>",
         Rock.Web.UI.Controls.CodeEditorMode.Lava,
         defaultValue: @"
@@ -32,7 +32,7 @@ namespace com.bemaservices.RemoteCheckDeposit.FileFormatTypes
 Account Number: {{ FileFormat | Attribute:'AccountNumber' }}
 Created On {{ Date | Date:'MM-dd-yyyy'}} at {{ Date | Date:'HH:mm' }} by Teller
 Deposited {{ Transactions | Format:'N0' }} checks totaling {{ Amount | FormatAsCurrency }}
-", order: 30 )]
+", order: 12 )]
 
     public class HuntingtonBank : X937DSTU
     {
@@ -79,7 +79,11 @@ Deposited {{ Transactions | Format:'N0' }} checks totaling {{ Amount | FormatAsC
         /// </returns>
         protected override FileHeader GetFileHeaderRecord( ExportOptions options )
         {
+            var institutionRoutingNumber = Rock.Security.Encryption.DecryptString( GetAttributeValue( options.FileFormat, "InstitutionRoutingNumber" ) );
+
             var header = base.GetFileHeaderRecord( options );
+
+            header.ImmediateOriginRoutingNumber = institutionRoutingNumber;
 
             //
             // The combination of the following fields must be unique:
@@ -129,6 +133,20 @@ Deposited {{ Transactions | Format:'N0' }} checks totaling {{ Amount | FormatAsC
             return header;
         }
 
+        protected override BundleHeader GetBundleHeader( ExportOptions options, int bundleIndex )
+        {
+            var header = base.GetBundleHeader( options, bundleIndex );
+            header.ReturnLocationRoutingNumber = string.Empty;
+            return header;
+        }
+
+        protected override BundleControl GetBundleControl( ExportOptions options, List<Record> records )
+        {
+            var control = base.GetBundleControl( options, records );
+            control.MICRValidTotalAmount = null;
+            return control;
+        }
+
         protected override CashLetterControl GetCashLetterControlRecord( ExportOptions options, List<Record> records )
         {
             var cashLeterControl = base.GetCashLetterControlRecord( options, records );
@@ -155,21 +173,6 @@ Deposited {{ Transactions | Format:'N0' }} checks totaling {{ Amount | FormatAsC
         }
 
         /// <summary>
-        /// Gets the bundle header record (type 20).
-        /// </summary>
-        /// <param name="options">Export options to be used by the component.</param>
-        /// <param name="bundleIndex">Number of existing bundle records in the cash letter.</param>
-        /// <returns>A BundleHeader record.</returns>
-        protected override Records.X937.BundleHeader GetBundleHeader( ExportOptions options, int bundleIndex )
-        {
-            var institutionRoutingNumber = Rock.Security.Encryption.DecryptString( GetAttributeValue( options.FileFormat, "InstitutionRoutingNumber" ) );
-
-            var header = base.GetBundleHeader( options, bundleIndex );
-            header.ReturnLocationRoutingNumber = institutionRoutingNumber;
-            return header;
-        }
-
-        /// <summary>
         /// Gets the credit detail deposit record (type 61).
         /// </summary>
         /// <param name="options">Export options to be used by the component.</param>
@@ -180,9 +183,9 @@ Deposited {{ Transactions | Format:'N0' }} checks totaling {{ Amount | FormatAsC
         /// </returns>
         protected override List<Record> GetCreditDetailRecords( ExportOptions options, int bundleIndex, List<FinancialTransaction> transactions )
         {
-            var routingNumber = Rock.Security.Encryption.DecryptString( GetAttributeValue( options.FileFormat, "RoutingNumber" ) );
+            var institutionRoutingNumber = Rock.Security.Encryption.DecryptString( GetAttributeValue( options.FileFormat, "InstitutionRoutingNumber" ) );
             var depositRoutingNumber = Rock.Security.Encryption.DecryptString( GetAttributeValue( options.FileFormat, "DepositRoutingNumber" ) );
-            var depositAccountNumber = Rock.Security.Encryption.DecryptString( GetAttributeValue( options.FileFormat, "DepositAccountNumber" ) );
+            var accountNumber = Rock.Security.Encryption.DecryptString( GetAttributeValue( options.FileFormat, "AccountNumber" ) );
 
             var records = new List<Record>();
 
@@ -190,7 +193,7 @@ Deposited {{ Transactions | Format:'N0' }} checks totaling {{ Amount | FormatAsC
             {
                 PayorBankRoutingNumber = depositRoutingNumber.Substring( 0, 8 ),
                 PayorBankRoutingNumberCheckDigit = depositRoutingNumber.Substring( 8, 1 ),
-                OnUs = ( depositAccountNumber + "/" ).PadLeft( 18, '0' ).PadLeft( 20, ' ' ),
+                OnUs = ( accountNumber + "/" ).PadLeft( 20, ' ' ),
                 ItemAmount = transactions.Sum( t => t.TotalAmount ),
                 ClientInstitutionItemSequenceNumber = GetNextItemSequenceNumber().ToString( "000000000000000" ),
                 BankOfFirstDepositIndicator = "U",
@@ -210,7 +213,7 @@ Deposited {{ Transactions | Format:'N0' }} checks totaling {{ Amount | FormatAsC
                     var detail = new ImageViewDetail
                     {
                         ImageIndicator = 1,
-                        ImageCreatorRoutingNumber = routingNumber,
+                        ImageCreatorRoutingNumber = institutionRoutingNumber,
                         ImageCreatorDate = options.ExportDateTime,
                         ImageViewFormatIndicator = 0,
                         CompressionAlgorithmIdentifier = 0,
@@ -224,12 +227,14 @@ Deposited {{ Transactions | Format:'N0' }} checks totaling {{ Amount | FormatAsC
                     //
                     var data = new ImageViewData
                     {
-                        InstitutionRoutingNumber = routingNumber,
+                        InstitutionRoutingNumber = institutionRoutingNumber,
                         BundleBusinessDate = options.BusinessDateTime,
                         ClientInstitutionItemSequenceNumber = creditDetail.ClientInstitutionItemSequenceNumber,
                         ClippingOrigin = 0,
                         ImageData = ms.ReadBytesToEnd()
                     };
+
+                    detail.DataSize = (int)data.ImageData.Length;
 
                     records.Add( detail );
                     records.Add( data );
@@ -269,9 +274,8 @@ Deposited {{ Transactions | Format:'N0' }} checks totaling {{ Amount | FormatAsC
             checkDetailA.BankOfFirstDepositRoutingNumber = Rock.Security.Encryption.DecryptString( GetAttributeValue( options.FileFormat, "BOFDRoutingNumber" ) );
             checkDetailA.TruncationIndicator = "Y";
             checkDetailA.BankOfFirstDepositItemSequenceNumber = sequenceNumber.ToString("000000000000000");
-            checkDetailA.BankOfFirstDepositCorrectionIndicator = "";
-            checkDetailA.BankOfFirstDepositAccountNumber = Rock.Security.Encryption.DecryptString(GetAttributeValue(options.FileFormat, "AccountNumber"));
-            checkDetailA.BankOfFirstDepositCorrectionIndicator = string.Empty; ;
+            checkDetailA.BankOfFirstDepositAccountNumber = Rock.Security.Encryption.DecryptString( GetAttributeValue( options.FileFormat, "AccountNumber" ) ).PadLeft( 18, ' ' );
+            checkDetailA.BankOfFirstDepositCorrectionIndicator = "0";
             foreach ( var imageData in records.Where( r => r.RecordType == 52 ).Cast<dynamic>() )
             {
                 imageData.ClientInstitutionItemSequenceNumber = sequenceNumber.ToString( "000000000000000" );
@@ -291,20 +295,20 @@ Deposited {{ Transactions | Format:'N0' }} checks totaling {{ Amount | FormatAsC
         protected override List<Record> GetImageRecords( ExportOptions options, FinancialTransaction transaction, FinancialTransactionImage image, bool isFront )
         {
 
-            var originRoutingNumber = Rock.Security.Encryption.DecryptString( GetAttributeValue( options.FileFormat, "AccountNumber" ) );
+            var institutionRoutingNumber = Rock.Security.Encryption.DecryptString( GetAttributeValue( options.FileFormat, "InstitutionRoutingNumber" ) );
 
             var records = base.GetImageRecords( options, transaction, image, isFront );
 
             var detail = records.Where( r => r.RecordType == 50 ).Cast<ImageViewDetail>().FirstOrDefault();
             if ( detail != null )
             {
-                detail.ImageCreatorRoutingNumber = originRoutingNumber;
+                detail.ImageCreatorRoutingNumber = institutionRoutingNumber;
             }
 
             var data = records.Where( r => r.RecordType == 52 ).Cast<ImageViewData>().FirstOrDefault();
             if ( data != null )
             {
-                data.InstitutionRoutingNumber = originRoutingNumber;
+                data.InstitutionRoutingNumber = institutionRoutingNumber;
             }
 
             return records;
