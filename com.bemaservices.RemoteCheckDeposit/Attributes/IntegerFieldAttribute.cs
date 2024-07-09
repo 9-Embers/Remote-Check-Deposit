@@ -48,6 +48,8 @@ namespace com.bemaservices.RemoteCheckDeposit.Attributes
             }
         }
 
+
+
         /// <summary>
         /// Encode a field by writing the property value into the writer.
         /// </summary>
@@ -56,11 +58,25 @@ namespace com.bemaservices.RemoteCheckDeposit.Attributes
         /// <param name="property">The information abou the property to be encoded.</param>
         public override void EncodeField( BinaryWriter writer, Record record, PropertyInfo property )
         {
+            writer.WriteEbcdicString( GetValue( record, property ) );
+        }
+
+        /// <summary>
+        /// Writes a property value into the writer.
+        /// </summary>
+        /// <param name="writer">The writer that will contain the data.</param>
+        /// <param name="record">The object whose property will be written.</param>
+        /// <param name="property">The information abou the property to be written.</param>
+        public override void WriteField( TextWriter writer, Record record, PropertyInfo property )
+        {
+            writer.Write( GetValue( record, property ) );
+        }
+
+        private string GetValue( Record record, PropertyInfo property )
+        {
             int? value = ( int? ) property.GetValue( record );
 
-            string valueStr = value.HasValue ? value.ToString() : new string( ' ', Size );
-
-            writer.WriteEbcdicString( valueStr.PadLeft( Size, '0' ).Right( Size ) );
+            return value.HasValue ? value.ToString().PadLeft( Size, '0') : new string( ' ', Size );
         }
     }
 }

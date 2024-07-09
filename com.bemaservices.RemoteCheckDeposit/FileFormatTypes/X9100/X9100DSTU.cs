@@ -102,22 +102,83 @@ Date: {{ BusinessDate | Date:'M/d/yyyy' }}", order: 10, required: false)]
             records.Add(GetCashLetterControlRecord(options, records));
             records.Add(GetFileControlRecord(options, records));
 
+            // If testing write the records to a X9100.txt file in App_Data/Logs
+            bool isTestMode = GetAttributeValue( options.FileFormat, "TestMode" ).AsBoolean( true );
+            if ( isTestMode )
+            {
+                try
+                {
+                    string directory = AppDomain.CurrentDomain.BaseDirectory;
+                    directory = Path.Combine( directory, "App_Data", "Logs" );
+
+                    if ( !Directory.Exists( directory ) )
+                    {
+                        Directory.CreateDirectory( directory );
+                    }
+
+                    string filePath = Path.Combine( directory, "X9100.txt" );
+                    using ( var writer = new StreamWriter( filePath, false ) )
+                    {
+                        foreach ( var record in records )
+                        {
+                            WriteTextRecord( record, writer );
+                            writer.WriteLine();
+                        }
+                    }
+                }
+                catch
+                {
+                    // Intentionally ignored, don't error if we couldn't log.
+                }
+            }
+
             //
             // Encode all the records into a memory stream so that it can be saved to a file
             // by the caller.
             //
             var stream = new MemoryStream();
-            using (var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, true))
+
+            WritePreContent( options, stream );
+
+            using ( var writer = new BinaryWriter(stream, System.Text.Encoding.UTF8, true))
             {
                 foreach (var record in records)
                 {
-                    record.Encode(writer);
+                    WriteRecord( record, writer );
                 }
             }
 
             stream.Position = 0;
 
             return stream;
+        }
+
+
+        /// <summary>
+        /// Gets pre text records.
+        /// </summary>
+        /// <param name="options">Export options to be used by the component.</param>
+        /// <param name="stream">A Memory Stream.</param>
+        protected virtual void WritePreContent( ExportOptions options, MemoryStream stream )
+        {
+        }
+
+        /// <summary>
+        /// Gets pre text records.
+        /// </summary>
+        /// <param name="options">Export options to be used by the component.</param>
+        /// <param name="stream">A Memory Stream.</param>
+        protected virtual void WriteRecord( Record record, BinaryWriter writer )
+        {
+            record.Encode( writer, true );
+        }
+
+        /// <summary>
+        /// Writes the record to stream
+        /// </summary>
+        protected virtual void WriteTextRecord( Record record, StreamWriter writer )
+        {
+            record.Write( writer );
         }
 
         #region File Records

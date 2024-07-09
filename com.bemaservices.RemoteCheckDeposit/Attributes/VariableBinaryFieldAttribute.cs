@@ -4,6 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 
+using Rock;
+
 namespace com.bemaservices.RemoteCheckDeposit.Attributes
 {
     /// <summary>
@@ -52,6 +54,23 @@ namespace com.bemaservices.RemoteCheckDeposit.Attributes
 
             writer.WriteEbcdicString( length.PadLeft( Size, '0' ) );
             writer.Write( value.ToArray() );
+        }
+
+        /// <summary>
+        /// Writes a property value into the writer.
+        /// </summary>
+        /// <param name="writer">The writer that will contain the data.</param>
+        /// <param name="record">The object whose property will be written.</param>
+        /// <param name="property">The information abou the property to be written.</param>
+        public override void WriteField( TextWriter writer, Record record, PropertyInfo property )
+        {
+            ICollection<byte> value = ( ICollection<byte> ) property.GetValue( record ) ?? new byte[0];
+            string length = value.Count.ToString();
+            writer.Write( length.PadLeft( Size, '0' ) );
+            if ( value.Count > 0 ) 
+            { 
+                writer.Write( "[Binary Data]" );
+            }
         }
 
         /// <summary>

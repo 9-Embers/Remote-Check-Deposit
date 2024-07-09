@@ -225,6 +225,35 @@ namespace com.bemaservices.RemoteCheckDeposit
             }
         }
 
+        /// <summary>
+        /// Write the record into the TextWriter. 
+        /// </summary>
+        /// <param name="writer">The writer that will contain the data.</param>
+        public virtual void Write( TextWriter writer )
+        {
+            //
+            // Get all properties that have a FieldAttribute defined on them and then order
+            // by the FieldNumber.
+            //
+            var fields = GetType().GetProperties( BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance )
+                .Where( p => Attribute.IsDefined( p, typeof( FieldAttribute ) ) )
+                .Select( p => new
+                {
+                    Property = p,
+                    Attribute = p.GetCustomAttribute<FieldAttribute>()
+                } )
+                .OrderBy( f => f.Attribute.FieldNumber )
+                .ToList();
+
+            //
+            // Step through each field and encode it into the data writer.
+            //
+            foreach ( var field in fields )
+            {
+                field.Attribute.WriteField( writer, this, field.Property );
+            }
+        }
+
         #endregion
     }
 }

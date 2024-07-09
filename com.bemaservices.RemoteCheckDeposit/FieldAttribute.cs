@@ -48,6 +48,14 @@ namespace com.bemaservices.RemoteCheckDeposit
         public abstract void EncodeField( BinaryWriter writer, Record record, PropertyInfo property );
 
         /// <summary>
+        /// Encode a field by writing the property value into the writer.
+        /// </summary>
+        /// <param name="writer">The writer that will contain the encoded data.</param>
+        /// <param name="record">The object whose property will be encoded.</param>
+        /// <param name="property">The information abou the property to be encoded.</param>
+        public abstract void WriteField( TextWriter writer, Record record, PropertyInfo property );
+
+        /// <summary>
         /// Gets the total size of this field when it's encoded.
         /// </summary>
         /// <returns>An integer that represents the number of bytes that will be used once it is encoded.</returns>
