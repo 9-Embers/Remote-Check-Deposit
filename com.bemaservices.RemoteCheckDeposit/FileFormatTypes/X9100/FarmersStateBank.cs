@@ -60,7 +60,11 @@ namespace com.bemaservices.RemoteCheckDeposit.FileFormatTypes
         /// </returns>
         protected override FileHeader GetFileHeaderRecord( ExportOptions options )
         {
+            var institutionRoutingNumber = Rock.Security.Encryption.DecryptString( GetAttributeValue( options.FileFormat, "InstitutionRoutingNumber" ) );
+
             var header = base.GetFileHeaderRecord( options );
+
+            header.ImmediateOriginRoutingNumber = institutionRoutingNumber;
             header.StandardLevel = 03;
 
             //
@@ -139,6 +143,7 @@ namespace com.bemaservices.RemoteCheckDeposit.FileFormatTypes
         {
             var header = base.GetBundleHeader( options, bundleIndex );
             header.ReturnLocationRoutingNumber = string.Empty;
+            header.SequenceNumber = header.SequenceNumber.PadLeft( 4, '0' );
             return header;
         }
 
@@ -155,7 +160,71 @@ namespace com.bemaservices.RemoteCheckDeposit.FileFormatTypes
 
             var checkDetail = records.Where( r => r.RecordType == 25 ).Cast<CheckDetail>().FirstOrDefault();
             checkDetail.ClientInstitutionItemSequenceNumber = sequenceNumber.ToString( "000000000000000" );
+            checkDetail.CheckDetailRecordAddendumCount = 0;
+
+            //return records;
+            // Type 26 is not needed
+            return records.Where( r => r.RecordType == 25 ).ToList();
+        }
+
+        /// <summary>
+        /// Gets the image records (type 50 and 52)
+        /// </summary>
+        /// <param name="options"></param>
+        /// <param name="transaction"></param>
+        /// <param name="image"></param>
+        /// <param name="isFront"></param>
+        /// <returns></returns>
+        protected override List<Record> GetImageRecords( ExportOptions options, FinancialTransaction transaction, FinancialTransactionImage image, bool isFront )
+        {
+            var records = base.GetImageRecords( options, transaction, image, isFront );
+
+            var detail = records.Where( r => r.RecordType == 50 ).Cast<ImageViewDetail>().FirstOrDefault();
+            if ( detail != null )
+            {
+                detail.DigitalSignatureMethod = null;
+                detail.SecurityKeySize = null;
+                detail.StartOfProtectedData = null;
+                detail.LengthOfProtectedData = null;
+            }
+
+            var data = records.Where( r => r.RecordType == 52 ).Cast<ImageViewData>().FirstOrDefault();
+            if ( data != null )
+            {
+                data.ClientInstitutionItemSequenceNumber = GetSystemSetting( LastItemSequenceNumberKey ).PadLeft( 15, '0' );
+                data.ClippingCoordinateH1 = null;
+                data.ClippingCoordinateH2 = null;
+                data.ClippingCoordinateV1 = null;
+                data.ClippingCoordinateV2 = null;
+            }
+
             return records;
+        }
+
+        /// <summary>
+        /// Gets the bundle control record (type 70)
+        /// </summary>
+        /// <param name="options"></param>
+        /// <param name="records"></param>
+        /// <returns></returns>
+        protected override BundleControl GetBundleControl( ExportOptions options, List<Record> records )
+        {
+            var control = base.GetBundleControl( options, records );
+            control.MICRValidTotalAmount = null;
+            return control;
+        }
+
+        /// <summary>
+        /// Gets the Cash Leter Control Record (type 90)
+        /// </summary>
+        /// <param name="options"></param>
+        /// <param name="records"></param>
+        /// <returns></returns>
+        protected override CashLetterControl GetCashLetterControlRecord( ExportOptions options, List<Record> records )
+        {
+            var control = base.GetCashLetterControlRecord( options, records );
+            control.ECEInstitutionName = GetAttributeValue( options.FileFormat, "ContactName" );
+            return control;
         }
 
         #endregion
