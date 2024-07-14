@@ -1,7 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.Composition;
-using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -261,7 +260,7 @@ Deposited {{ Transactions | Format:'N0' }} checks totaling {{ Amount | FormatAsC
             // Modify the Check Detail Record and Check Image Data records to have
             // a unique item sequence number.
             //
-            var checkDetail = records.Where( r => r.RecordType == 25 ).Cast<Records.X937.CheckDetail>().FirstOrDefault();
+            var checkDetail = records.Where( r => r.RecordType == 25 ).Cast<CheckDetail>().FirstOrDefault();
             checkDetail.ClientInstitutionItemSequenceNumber = sequenceNumber.ToString( "000000000000000" );
             checkDetail.ElectronicReturnAcceptanceIndicator = "0";
             checkDetail.MICRValidIndicator = 1; //Added 9/27/19 due to feedback from 5/3
@@ -270,7 +269,7 @@ Deposited {{ Transactions | Format:'N0' }} checks totaling {{ Amount | FormatAsC
 
 
             //Modify Check Detail Adden A
-            var checkDetailA = records.Where( r => r.RecordType == 26 ).Cast<Records.X937.CheckDetailAddendumA>().FirstOrDefault();
+            var checkDetailA = records.Where( r => r.RecordType == 26 ).Cast<CheckDetailAddendumA>().FirstOrDefault();
             checkDetailA.BankOfFirstDepositRoutingNumber = Rock.Security.Encryption.DecryptString( GetAttributeValue( options.FileFormat, "BOFDRoutingNumber" ) );
             checkDetailA.TruncationIndicator = "Y";
             checkDetailA.BankOfFirstDepositItemSequenceNumber = sequenceNumber.ToString("000000000000000");
