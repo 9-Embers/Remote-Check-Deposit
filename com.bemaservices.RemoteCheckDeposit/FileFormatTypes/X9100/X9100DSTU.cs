@@ -248,8 +248,8 @@ Date: {{ BusinessDate | Date:'M/d/yyyy' }}", order: 10, required: false)]
         /// 
         protected virtual Records.X9100.CashLetterHeader GetCashLetterHeaderRecord(ExportOptions options)
         {
-            var routingNumber = int.Parse(Rock.Security.Encryption.DecryptString(GetAttributeValue(options.FileFormat, "RoutingNumber")));
-            var accountNumber = int.Parse(Rock.Security.Encryption.DecryptString(GetAttributeValue(options.FileFormat, "AccountNumber")));
+            var routingNumber = Rock.Security.Encryption.DecryptString(GetAttributeValue(options.FileFormat, "RoutingNumber"));
+            var accountNumber = Rock.Security.Encryption.DecryptString(GetAttributeValue(options.FileFormat, "AccountNumber"));
             var contactName = GetAttributeValue(options.FileFormat, "ContactName");
             var contactPhone = GetAttributeValue(options.FileFormat, "ContactPhone");
 

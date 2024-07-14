@@ -13,16 +13,16 @@ namespace com.bemaservices.RemoteCheckDeposit.Records.X9100
         public int CollectionTypeIndicator { get; set; }
 
         /// <summary>
-        /// Field 3 Size 9 IntegerField
+        /// Field 3 Size 9 TextField
         /// </summary>
-        [IntegerField( 3, 9 )]
-        public int DestinationRoutingNumber { get; set; }
+        [TextField( 3, 9 )]
+        public string DestinationRoutingNumber { get; set; }
 
         /// <summary>
-        /// Field 4 Size 9 IntegerField
+        /// Field 4 Size 9 String Field
         /// </summary>
-        [IntegerField( 4, 9 )]
-        public int EceInstitutionRoutingNumber { get; set; }
+        [TextField( 4, 9 )]
+        public string EceInstitutionRoutingNumber { get; set; }
 
         /// <summary>
         /// Field 5 DateField
