@@ -1,13 +1,19 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 using System.ComponentModel.Composition;
+using System.IO;
 using System.Linq;
 using System.Text;
 
 using com.bemaservices.RemoteCheckDeposit.Records.X9100;
 
+using DotLiquid.Tags;
+
 using Rock;
+using Rock.Attribute;
 using Rock.Model;
+using Rock.Plugin.HotFixes;
 
 namespace com.bemaservices.RemoteCheckDeposit.FileFormatTypes
 {
@@ -18,6 +24,8 @@ namespace com.bemaservices.RemoteCheckDeposit.FileFormatTypes
     [Description( "Processes a batch export for Farmers State Bank.  This exports is built on X9.100-187 Standard " )]
     [Export(typeof(FileFormatTypeComponent))]
     [ExportMetadata("ComponentName", "Farmers State Bank")]
+
+    [EncryptedTextField( "Deposit Routing Number", "The routing number to be used on Credit Detail record (25)", true, key: "DepositRoutingNumber", order: 12 )]
 
     class FarmersStateBank : X9100DSTU
     {
@@ -46,6 +54,125 @@ namespace com.bemaservices.RemoteCheckDeposit.FileFormatTypes
         #endregion
 
         #region Export Batches
+
+        public override Stream ExportBatches( ExportOptions options, out List<string> errorMessages )
+        {
+            var records = new List<Record>();
+
+            errorMessages = new List<string>();
+
+            //
+            // Get all the transactions that will be exported from these batches.
+            //
+            var transactions = options.Batches.SelectMany( b => b.Transactions )
+                .OrderBy( t => t.ProcessedDateTime )
+                .ThenBy( t => t.Id )
+                .ToList();
+
+            //
+            // Perform error checking to ensure that all the transactions in these batches
+            // are of the proper currency type.
+            //
+            List<Guid> currencyGuids = GetAttributeValue( options.FileFormat, "CurrencyTypes" ).SplitDelimitedValues().AsGuidList();
+            if ( !currencyGuids.Any() )
+            {
+                //Add the default check option if nothing is selected
+                currencyGuids.Add( Guid.Parse( "8B086A19-405A-451F-8D44-174E92D6B402" ) );
+            }
+            List<int> currencyIds = new List<int>();
+            foreach ( Guid guid in currencyGuids )
+            {
+                currencyIds.Add( Rock.Web.Cache.DefinedValueCache.Get( guid ).Id );
+            }
+
+            if ( transactions.Any( t => !currencyIds.Contains( t.FinancialPaymentDetail.CurrencyTypeValueId ?? -1 ) ) )
+            {
+                errorMessages.Add( "One or more transactions is not of a selected Check type." );
+                throw new Exception( "One or more transactions is not of a selected Check type." );
+            }
+
+            //
+            // Generate all the X9.100 records for this set of transactions.
+            //
+            records.Add( GetFileHeaderRecord( options ) );
+            records.Add( GetCashLetterHeaderRecord( options ) );
+            records.AddRange( GetBundleRecords( options, transactions ) );
+            records.Add( GetCashLetterControlRecord( options, records ) );
+            records.Add( GetFileControlRecord( options, records ) );
+
+            // Convert to Farmer's records
+            var farmersRecords = new List<Record>();
+            foreach( var record in records )
+            {
+                switch ( record.RecordType ) {
+                    case 25:
+                        farmersRecords.Add( new Records.X9100.FarmersStateBank.CheckDetail( record as CheckDetail )  );
+                        break;
+                    case 70:
+                        farmersRecords.Add( new Records.X9100.FarmersStateBank.BundleControl( record as BundleControl ) );
+                        break;
+                    case 90:
+                        farmersRecords.Add( new Records.X9100.FarmersStateBank.CashLetterControl( record as CashLetterControl ) );
+                        break;
+                    case 99:
+                        farmersRecords.Add( new Records.X9100.FarmersStateBank.FileControl( record as FileControl ) );
+                        break;
+                    default:
+                        farmersRecords.Add( record );
+                        break;
+                }
+            }
+
+            // If testing write the records to a X9100.txt file in App_Data/Logs
+            bool isTestMode = GetAttributeValue( options.FileFormat, "TestMode" ).AsBoolean( true );
+            if ( isTestMode )
+            {
+                try
+                {
+                    string directory = AppDomain.CurrentDomain.BaseDirectory;
+                    directory = Path.Combine( directory, "App_Data", "Logs" );
+
+                    if ( !Directory.Exists( directory ) )
+                    {
+                        Directory.CreateDirectory( directory );
+                    }
+
+                    string filePath = Path.Combine( directory, "X9100.txt" );
+                    using ( var writer = new StreamWriter( filePath, false ) )
+                    {
+                        foreach ( var record in farmersRecords )
+                        {
+                            WriteTextRecord( record, writer );
+                            writer.WriteLine();
+                        }
+                    }
+                }
+                catch
+                {
+                    // Intentionally ignored, don't error if we couldn't log.
+                }
+            }
+
+            //
+            // Encode all the records into a memory stream so that it can be saved to a file
+            // by the caller.
+            //
+            var stream = new MemoryStream();
+
+            WritePreContent( options, stream );
+
+            using ( var writer = new BinaryWriter( stream, System.Text.Encoding.UTF8, true ) )
+            {
+                foreach ( var record in farmersRecords )
+                {
+                    WriteRecord( record, writer );
+                }
+            }
+
+            stream.Position = 0;
+
+            return stream;
+        }
 
         #endregion
 
@@ -202,11 +329,38 @@ namespace com.bemaservices.RemoteCheckDeposit.FileFormatTypes
         }
 
         /// <summary>
-        /// Gets the bundle control record (type 70)
+        /// Gets the credit detail deposit record (type 61).
         /// </summary>
-        /// <param name="options"></param>
-        /// <param name="records"></param>
-        /// <returns></returns>
+        /// <param name="options">Export options to be used by the component.</param>
+        /// <param name="bundleIndex">Number of existing bundle records in the cash letter.</param>
+        /// <param name="transactions">The transactions associated with this deposit.</param>
+        /// <returns>
+        /// A collection of records.
+        /// </returns>
+        protected override List<Record> GetCreditDetailRecords( ExportOptions options, int bundleIndex, List<FinancialTransaction> transactions )
+        {
+            var depositRoutingNumber = Rock.Security.Encryption.DecryptString( GetAttributeValue( options.FileFormat, "DepositRoutingNumber" ) );
+            var accountNumber = Rock.Security.Encryption.DecryptString( GetAttributeValue( options.FileFormat, "AccountNumber" ) );
+
+            var records = new List<Record>();
+
+            var creditDetail = new CheckDetail //Type 25
+            {
+                PayorBankRoutingNumber = depositRoutingNumber.Substring( 0, 8 ),
+                PayorBankRoutingNumberCheckDigit = depositRoutingNumber.Substring( 8, 1 ),
+                OnUs = ( accountNumber + "/ttt" ).PadLeft( 20, ' ' ),
+                ItemAmount = transactions.Sum( t => t.TotalAmount ),
+                ClientInstitutionItemSequenceNumber = GetNextItemSequenceNumber().ToString( "000000000000000" ),
+                BankOfFirstDepositIndicator = "U",
+                CheckDetailRecordAddendumCount = 00,
+                DocumentationTypeIndicator = "G"
+            };
+
+            records.Add(  creditDetail );
+
+            return records;
+        }
+
         protected override BundleControl GetBundleControl( ExportOptions options, List<Record> records )
         {
             var control = base.GetBundleControl( options, records );

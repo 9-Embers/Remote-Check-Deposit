@@ -10,6 +10,8 @@ namespace com.bemaservices.RemoteCheckDeposit.Attributes
     /// </summary>
     public class MoneyFieldAttribute : FieldAttribute
     {
+        public bool PadWithZeroes { get; set; }
+
         /// <summary>
         /// Defines a new field attribute on a record.
         /// </summary>
@@ -18,6 +20,13 @@ namespace com.bemaservices.RemoteCheckDeposit.Attributes
         public MoneyFieldAttribute( int fieldNumber, int size )
             : base( fieldNumber, size )
         {
+            PadWithZeroes = false;
+        }
+
+        public MoneyFieldAttribute( int fieldNumber, int size, bool padWithZeroes )
+            : base( fieldNumber, size )
+        {
+            PadWithZeroes = padWithZeroes;
         }
 
         /// <summary>
@@ -83,7 +92,8 @@ namespace com.bemaservices.RemoteCheckDeposit.Attributes
                 }
             }
 
-            return value.HasValue ? value.Value.ToString( "#" ).PadLeft( Size, ' ' ) : new string( ' ', Size );
+            char padChar = PadWithZeroes ? '0' : ' ' ;
+            return value.HasValue ? value.Value.ToString( "#" ).PadLeft( Size, padChar ) : new string( padChar, Size );
         }
     }
 }

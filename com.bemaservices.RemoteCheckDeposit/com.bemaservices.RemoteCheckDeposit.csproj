@@ -143,6 +143,10 @@
     <Compile Include="Records\X9100\CheckDetailAddendumA.cs" />
     <Compile Include="Records\X9100\CreditDetail.cs" />
     <Compile Include="Records\X9100\CreditReconciliation.cs" />
+    <Compile Include="Records\X9100\FarmersStateBank\BundleControl.cs" />
+    <Compile Include="Records\X9100\FarmersStateBank\CashLetterControl.cs" />
+    <Compile Include="Records\X9100\FarmersStateBank\CheckDetail.cs" />
+    <Compile Include="Records\X9100\FarmersStateBank\FileControl.cs" />
     <Compile Include="Records\X9100\FileControl.cs" />
     <Compile Include="Records\X9100\FileHeader.cs" />
     <Compile Include="Records\X9100\ImageViewData.cs" />
