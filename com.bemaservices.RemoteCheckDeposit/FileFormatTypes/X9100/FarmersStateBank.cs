@@ -26,6 +26,15 @@ namespace com.bemaservices.RemoteCheckDeposit.FileFormatTypes
     [ExportMetadata("ComponentName", "Farmers State Bank")]
 
     [EncryptedTextField( "Deposit Routing Number", "The routing number to be used on Credit Detail record (25)", true, key: "DepositRoutingNumber", order: 12 )]
+    [EncryptedTextField( "Credit Transaction Number", "The credit transaction number to be included on Credit Detail record (25). Farmers should provide this number.", true, key: "CreditTransactionNumberr", order: 13 )]
+    [CodeEditorField( "Deposit Slip Template", "The template for the deposit slip that will be generated. <span class='tip tip-lava'></span>",
+        Rock.Web.UI.Controls.CodeEditorMode.Lava,
+        defaultValue: @"
+{{ FileFormat | Attribute:'OriginName' }}
+Account Number: {{ FileFormat | Attribute:'AccountNumber' }}
+Created On {{ Date | Date:'MM-dd-yyyy'}} at {{ Date | Date:'HH:mm' }} by Teller
+Deposited {{ Transactions | Format:'N0' }} checks totaling {{ Amount | FormatAsCurrency }}
+", order: 14 )]
 
     class FarmersStateBank : X9100DSTU
     {
@@ -341,6 +350,7 @@ namespace com.bemaservices.RemoteCheckDeposit.FileFormatTypes
         {
             var depositRoutingNumber = Rock.Security.Encryption.DecryptString( GetAttributeValue( options.FileFormat, "DepositRoutingNumber" ) );
             var accountNumber = Rock.Security.Encryption.DecryptString( GetAttributeValue( options.FileFormat, "AccountNumber" ) );
+            var creditTransactionNumber = Rock.Security.Encryption.DecryptString( GetAttributeValue( options.FileFormat, "CreditTransactionNumberr" ) );
 
             var records = new List<Record>();
 
@@ -348,7 +358,7 @@ namespace com.bemaservices.RemoteCheckDeposit.FileFormatTypes
             {
                 PayorBankRoutingNumber = depositRoutingNumber.Substring( 0, 8 ),
                 PayorBankRoutingNumberCheckDigit = depositRoutingNumber.Substring( 8, 1 ),
-                OnUs = ( accountNumber + "/ttt" ).PadLeft( 20, ' ' ),
+                OnUs = $"{accountNumber}/{creditTransactionNumber}".PadLeft( 20, ' ' ),
                 ItemAmount = transactions.Sum( t => t.TotalAmount ),
                 ClientInstitutionItemSequenceNumber = GetNextItemSequenceNumber().ToString( "000000000000000" ),
                 BankOfFirstDepositIndicator = "U",
@@ -357,6 +367,44 @@ namespace com.bemaservices.RemoteCheckDeposit.FileFormatTypes
             };
 
             records.Add(  creditDetail );
+
+            for ( int i = 0; i < 2; i++ )
+            {
+                using ( var ms = GetDepositSlipImage( options, i == 0, transactions ) )
+                {
+                    //
+                    // Get the Image View Detail record (type 50).
+                    //
+                    var detail = new ImageViewDetail
+                    {
+                        ImageIndicator = 1,
+                        ImageCreatorRoutingNumber = depositRoutingNumber,
+                        ImageCreatorDate = options.ExportDateTime,
+                        ImageViewFormatIndicator = 0,
+                        CompressionAlgorithmIdentifier = 0,
+                        SideIndicator = i,
+                        ViewDescriptor = 0,
+                        DigitalSignatureIndicator = 0
+                    };
+
+                    //
+                    // Get the Image View Data record (type 52).
+                    //
+                    var data = new ImageViewData
+                    {
+                        InstitutionRoutingNumber = depositRoutingNumber,
+                        BundleBusinessDate = options.BusinessDateTime,
+                        ClientInstitutionItemSequenceNumber = creditDetail.ClientInstitutionItemSequenceNumber,
+                        ClippingOrigin = 0,
+                        ImageData = ms.ReadBytesToEnd()
+                    };
+
+                    detail.DataSize = ( int ) data.ImageData.Length;
+
+                    records.Add( detail );
+                    records.Add( data );
+                }
+            }
 
             return records;
         }
@@ -397,6 +445,58 @@ namespace com.bemaservices.RemoteCheckDeposit.FileFormatTypes
             SetSystemSetting(LastItemSequenceNumberKey, nextSequence.ToString());
 
             return nextSequence;
+        }
+
+        protected virtual Stream GetDepositSlipImage( ExportOptions options, bool isFrontSide, List<FinancialTransaction> transactions )
+        {
+            var bitmap = new System.Drawing.Bitmap( 1200, 550 );
+            var g = System.Drawing.Graphics.FromImage( bitmap );
+
+            var depositSlipTemplate = GetAttributeValue( options.FileFormat, "DepositSlipTemplate" );
+            var mergeFields = new Dictionary<string, object>
+            {
+                { "FileFormat", options.FileFormat },
+                { "Date", options.ExportDateTime.ToISO8601DateString() },
+                { "Transactions", transactions.Count() },
+                { "Amount", transactions.Sum( t => t.TotalAmount ) }
+            };
+            var depositSlipText = depositSlipTemplate.ResolveMergeFields( mergeFields, null );
+
+            //
+            // Ensure we are opague with white.
+            //
+            g.FillRectangle( System.Drawing.Brushes.White, new System.Drawing.Rectangle( 0, 0, 1200, 550 ) );
+
+            if ( isFrontSide )
+            {
+                g.DrawString( depositSlipText,
+                    new System.Drawing.Font( "Tahoma", 30 ),
+                    System.Drawing.Brushes.Black,
+                    new System.Drawing.PointF( 50, 50 ) );
+            }
+
+            g.Flush();
+
+            //
+            // Ensure the DPI is correct.
+            //
+            bitmap.SetResolution( 200, 200 );
+
+            //
+            // Compress using TIFF, CCITT Group 4 format.
+            //
+            var codecInfo = System.Drawing.Imaging.ImageCodecInfo.GetImageEncoders()
+                .Where( c => c.MimeType == "image/tiff" )
+                .First();
+            var parameters = new System.Drawing.Imaging.EncoderParameters( 1 );
+            parameters.Param[0] = new System.Drawing.Imaging.EncoderParameter( System.Drawing.Imaging.Encoder.Compression, ( long ) System.Drawing.Imaging.EncoderValue.CompressionCCITT4 );
+
+            var ms = new MemoryStream();
+            bitmap.Save( ms, codecInfo, parameters );
+            ms.Position = 0;
+
+            return ms;
+
         }
 
         /// <summary>
